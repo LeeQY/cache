@@ -46,6 +46,10 @@ func Close() {
 
 // Get a connection from the pool.
 func getConn() (*redis.Conn, error) {
+	if pool == nil {
+		return nil, errors.New("Pool is not created.")
+	}
+
 	//Get 5 times
 	for i := 0; i < 5; i++ {
 		if conn := pool.Get(); conn.Err() == nil {
