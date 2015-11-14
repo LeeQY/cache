@@ -84,6 +84,25 @@ func GetCache(key *string) (*string, error) {
 	}
 }
 
+// Get a key's TTL.
+func GetCacheTTL(key *string) (uint64, error) {
+	if key == nil {
+		return 0, errors.New("Key can't be nil.")
+	}
+
+	conn, err := getConn()
+	if err != nil {
+		return 0, err
+	}
+	defer (*conn).Close()
+
+	if reply, err := redis.Uint64((*conn).Do("TTL", *key)); err != nil {
+		return 0, err
+	} else {
+		return reply, nil
+	}
+}
+
 // MGet the cache values for the keys.
 //
 // Return: the values and ok. If the value for one is not exist, then it will be ""

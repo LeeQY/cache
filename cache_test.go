@@ -6,8 +6,6 @@ import (
 	"strconv"
 	"testing"
 	"time"
-
-	"github.com/garyburd/redigo/redis"
 )
 
 var (
@@ -147,13 +145,7 @@ func TestCache(t *testing.T) {
 
 	time.Sleep(500 * time.Millisecond)
 
-	conn, err := getConn()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer (*conn).Close()
-
-	if ttl, err := redis.Int((*conn).Do("TTL", key)); err != nil {
+	if ttl, err := GetCacheTTL(&key); err != nil {
 		t.Error(err)
 	} else if ttl != 2591999 {
 		t.Error("ttl is wrong.")
@@ -166,7 +158,8 @@ func TestCache(t *testing.T) {
 	}
 
 	time.Sleep(500 * time.Millisecond)
-	if ttl, err := redis.Int((*conn).Do("TTL", key)); err != nil {
+
+	if ttl, err := GetCacheTTL(&key); err != nil {
 		t.Error(err)
 	} else if ttl != 2591999 {
 		t.Error("ttl is wrong.")
