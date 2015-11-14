@@ -78,7 +78,11 @@ func GetCache(key *string) (*string, error) {
 	defer (*conn).Close()
 
 	if reply, err := redis.String((*conn).Do("GET", *key)); err != nil {
-		return nil, err
+		if err == redis.ErrNil {
+			return nil, nil
+		} else {
+			return nil, err
+		}
 	} else {
 		return &reply, nil
 	}

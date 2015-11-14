@@ -168,4 +168,11 @@ func TestCache(t *testing.T) {
 	if err := DelCache(&key); err != nil {
 		t.Error(err)
 	}
+
+	// test nil return
+	if k, err := GetCache(&key); err != nil {
+		t.Error(err)
+	} else if k != nil {
+		t.Error("k should be nil.")
+	}
 }
