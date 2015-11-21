@@ -286,10 +286,37 @@ func UpdateExpiration(k *[]string, ex *[]uint64) error {
 	return nil
 }
 
-// Set a cache with expiration in seconds.
+// Set a string cache with expiration in seconds.
 //
 // Return: error
 func SetStringCacheEX(key, value *string, ex uint64) error {
+	if key == nil {
+		return errors.New("The key should't be nil.")
+	}
+
+	if value == nil {
+		return errors.New("The value should't be nil.")
+	}
+
+	conn, err := getConn()
+	if err != nil {
+		return err
+	}
+	defer (*conn).Close()
+
+	_, err = (*conn).Do("SETEX", *key, ex, *value)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Set a bytes cache with expiration in seconds.
+//
+// Return: error
+func SetBytesCacheEX(key *string, value *[]byte, ex uint64) error {
 	if key == nil {
 		return errors.New("The key should't be nil.")
 	}

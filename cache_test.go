@@ -251,4 +251,19 @@ func testTimeEXP(t *testing.T) {
 	if err := DelCache(&key); err != nil {
 		t.Error(err)
 	}
+
+	bValue := []byte("abc")
+	if err := SetBytesCacheEX(&key, &bValue, ex); err != nil {
+		t.Fatal(err)
+	}
+
+	if result, err := GetBytesCache(&key); err != nil {
+		t.Error(err)
+	} else if !reflect.DeepEqual(*result, bValue) {
+		t.Error("values are not the same.")
+	}
+
+	if err := DelCache(&key); err != nil {
+		t.Error(err)
+	}
 }
