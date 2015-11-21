@@ -66,7 +66,7 @@ func getConn() (*redis.Conn, error) {
 // Get the cache value for the key.
 //
 // Return: value and ok
-func GetCache(key *string) (*string, error) {
+func GetStringCache(key *string) (*string, error) {
 	if key == nil {
 		return nil, errors.New("Key can't be nil.")
 	}
@@ -78,6 +78,31 @@ func GetCache(key *string) (*string, error) {
 	defer (*conn).Close()
 
 	if reply, err := redis.String((*conn).Do("GET", *key)); err != nil {
+		if err == redis.ErrNil {
+			return nil, nil
+		} else {
+			return nil, err
+		}
+	} else {
+		return &reply, nil
+	}
+}
+
+// Get the cache bytes value for the key.
+//
+// Return: value and ok
+func GetBytesCache(key *string) (*[]byte, error) {
+	if key == nil {
+		return nil, errors.New("Key can't be nil.")
+	}
+
+	conn, err := getConn()
+	if err != nil {
+		return nil, err
+	}
+	defer (*conn).Close()
+
+	if reply, err := redis.Bytes((*conn).Do("GET", *key)); err != nil {
 		if err == redis.ErrNil {
 			return nil, nil
 		} else {
@@ -107,10 +132,10 @@ func GetCacheTTL(key *string) (uint64, error) {
 	}
 }
 
-// MGet the cache values for the keys.
+// MGet the cache string values for the keys.
 //
 // Return: the values and ok. If the value for one is not exist, then it will be ""
-func MGetCache(keys *[]string) (*[]string, error) {
+func MGetStringCache(keys *[]string) (*[]string, error) {
 	if keys == nil {
 		return nil, errors.New("keys should not be nil.")
 	}
@@ -136,10 +161,71 @@ func MGetCache(keys *[]string) (*[]string, error) {
 	return &result, nil
 }
 
-// MSet the cache values for the keys.
+// MGet the cache values for the keys.
+//
+// Return: the values and ok. If the value for one is not exist, then it will be ""
+func MGetBytesCache(keys *[]string) (*[][]byte, error) {
+	if keys == nil {
+		return nil, errors.New("keys should not be nil.")
+	}
+
+	conn, err := getConn()
+	if err != nil {
+		return nil, err
+	}
+	defer (*conn).Close()
+
+	kL := len(*keys)
+
+	var keyN []interface{}
+	for i := 0; i < kL; i++ {
+		keyN = append(keyN, (*keys)[i])
+	}
+
+	reply, _ := redis.ByteSlices((*conn).Do("MGET", keyN...))
+	result := make([][]byte, len(reply))
+	for i := 0; i < len(reply); i++ {
+		result[i] = reply[i]
+	}
+	return &result, nil
+}
+
+// MSet the cache string values for the keys.
 //
 // Return: error
-func MSetCache(keys *[]string, values *[]string) error {
+func MSetStringCache(keys *[]string, values *[]string) error {
+	if keys == nil {
+		return errors.New("keys should not be nil.")
+	}
+
+	if values == nil {
+		return errors.New("values should not be nil.")
+	}
+
+	kL := len(*keys)
+	if kL != len(*values) {
+		return errors.New("The length of keys and values are not the same.")
+	}
+
+	conn, err := getConn()
+	if err != nil {
+		return err
+	}
+	defer (*conn).Close()
+
+	var v []interface{}
+	for i := 0; i < kL; i++ {
+		v = append(v, (*keys)[i], (*values)[i])
+	}
+	(*conn).Do("MSET", v...)
+
+	return nil
+}
+
+// MSet the cache bytes values for the keys.
+//
+// Return: error
+func MSetBytesCache(keys *[]string, values *[][]byte) error {
 	if keys == nil {
 		return errors.New("keys should not be nil.")
 	}
@@ -203,7 +289,7 @@ func UpdateExpiration(k *[]string, ex *[]uint64) error {
 // Set a cache with expiration in seconds.
 //
 // Return: error
-func SetCacheEX(key, value *string, ex uint64) error {
+func SetStringCacheEX(key, value *string, ex uint64) error {
 	if key == nil {
 		return errors.New("The key should't be nil.")
 	}
@@ -227,10 +313,37 @@ func SetCacheEX(key, value *string, ex uint64) error {
 	return nil
 }
 
-// Set a cache.
+// Set a string cache.
 //
 // Return: error
-func SetCache(key, value *string) error {
+func SetStringCache(key, value *string) error {
+	if key == nil {
+		return errors.New("The key should't be nil.")
+	}
+
+	if value == nil {
+		return errors.New("The value should't be nil.")
+	}
+
+	conn, err := getConn()
+	if err != nil {
+		return err
+	}
+	defer (*conn).Close()
+
+	_, err = (*conn).Do("SET", *key, *value)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Set a bytes cache.
+//
+// Return: error
+func SetBytesCache(key *string, value *[]byte) error {
 	if key == nil {
 		return errors.New("The key should't be nil.")
 	}

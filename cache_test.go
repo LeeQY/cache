@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"strconv"
@@ -9,8 +10,12 @@ import (
 )
 
 var (
-	//	address := "localhost:6379"
-	address = "192.168.1.103:6379"
+	address = "localhost:6379"
+	//	address = "192.168.1.103:6379"
+
+	prefix = "test"
+	key    = "test:1234567"
+	value  = "test"
 )
 
 func BenchmarkSetCache(b *testing.B) {
@@ -21,7 +26,7 @@ func BenchmarkSetCache(b *testing.B) {
 	count := 0
 	for i := 0; i < b.N; i++ {
 		k := strconv.Itoa(i)
-		SetCache(&k, &k)
+		SetStringCache(&k, &k)
 		count++
 	}
 	b.StopTimer()
@@ -50,7 +55,7 @@ func BenchmarkMSetCache(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		err := MSetCache(&keys, &keys)
+		err := MSetStringCache(&keys, &keys)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -69,21 +74,18 @@ func TestCache(t *testing.T) {
 
 	var err error
 
-	prefix := "test"
-	key := "test:1234567"
-	value := "test"
-
+	// test string handle
 	if exist, err := CheckCache(&key); err != nil {
 		t.Fatal(err)
 	} else if exist {
 		t.Error("Key should not be existed.")
 	}
 
-	if err := SetCache(&key, &value); err != nil {
+	if err := SetStringCache(&key, &value); err != nil {
 		t.Fatal(err)
 	}
 
-	if v, err := GetCache(&key); err != nil {
+	if v, err := GetStringCache(&key); err != nil {
 		t.Fatal(err)
 	} else {
 		if *v != value {
@@ -101,7 +103,50 @@ func TestCache(t *testing.T) {
 		t.Error(err)
 	}
 
-	//test the multi-methods
+	//test bytes cache
+	bKey := "test:byteskey"
+	bArray := []string{"ab", "cd", "ef"}
+	var bytes []byte
+	if bytes, err = json.Marshal(&bArray); err != nil {
+		t.Error(err)
+	}
+
+	if err := SetBytesCache(&bKey, &bytes); err != nil {
+		t.Error(err)
+	}
+
+	if bResult, err := GetBytesCache(&bKey); err != nil {
+		t.Error(err)
+	} else {
+		if !reflect.DeepEqual(bytes, *bResult) {
+			t.Fatal("Bytes result is not equal.")
+		}
+	}
+
+	if err := DelCache(&bKey); err != nil {
+		t.Error(err)
+	}
+
+	//test the multi-methods for string
+	testMultipleString(t)
+
+	//test multiple methods for bytes
+	testMultipleBytes(t)
+
+	//test time exp
+	testTimeEXP(t)
+
+	// test nil return
+	if k, err := GetStringCache(&key); err != nil {
+		t.Error(err)
+	} else if k != nil {
+		t.Error("k should be nil.")
+	}
+}
+
+func testMultipleString(t *testing.T) {
+	var err error
+
 	keys := make([]string, 5)
 	values := make([]string, 5)
 	for i := 0; i < 5; i++ {
@@ -109,12 +154,12 @@ func TestCache(t *testing.T) {
 		values[i] = strconv.Itoa(i)
 	}
 
-	if err := MSetCache(&keys, &values); err != nil {
+	if err := MSetStringCache(&keys, &values); err != nil {
 		t.Fatal(err)
 	}
 
 	var mv *[]string
-	mv, err = MGetCache(&keys)
+	mv, err = MGetStringCache(&keys)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -127,7 +172,7 @@ func TestCache(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	mv, err = MGetCache(&keys)
+	mv, err = MGetStringCache(&keys)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -135,11 +180,49 @@ func TestCache(t *testing.T) {
 	if empty := make([]string, 5); !reflect.DeepEqual(empty, *mv) {
 		t.Fatal("MDel result failed.")
 	}
+}
 
-	//test time exp
+func testMultipleBytes(t *testing.T) {
+	keys := make([]string, 5)
+	bValues := make([][]byte, 5)
+	for i := 0; i < 5; i++ {
+		keys[i] = fmt.Sprintf("%s:%s", prefix, strconv.Itoa(i))
+		bValues[i] = []byte(strconv.Itoa(i))
+	}
+
+	if err := MSetBytesCache(&keys, &bValues); err != nil {
+		t.Fatal(err)
+	}
+
+	var mbv *[][]byte
+	var err error
+	mbv, err = MGetBytesCache(&keys)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(bValues, *mbv) {
+		t.Fatal("MGet result failed.")
+	}
+
+	if err := MDelCache(&keys); err != nil {
+		t.Fatal(err)
+	}
+
+	mbv, err = MGetBytesCache(&keys)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if empty := make([][]byte, 5); !reflect.DeepEqual(empty, *mbv) {
+		t.Fatal("MDel result failed.")
+	}
+}
+
+func testTimeEXP(t *testing.T) {
 	var ex uint64 = 2592000
 
-	if err := SetCacheEX(&key, &value, ex); err != nil {
+	if err := SetStringCacheEX(&key, &value, ex); err != nil {
 		t.Fatal(err)
 	}
 
@@ -167,12 +250,5 @@ func TestCache(t *testing.T) {
 
 	if err := DelCache(&key); err != nil {
 		t.Error(err)
-	}
-
-	// test nil return
-	if k, err := GetCache(&key); err != nil {
-		t.Error(err)
-	} else if k != nil {
-		t.Error("k should be nil.")
 	}
 }
