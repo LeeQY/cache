@@ -145,10 +145,9 @@ func TestCache(t *testing.T) {
 }
 
 func testMultipleString(t *testing.T) {
-	var err error
-
 	keys := make([]string, 5)
 	values := make([]string, 5)
+
 	for i := 0; i < 5; i++ {
 		keys[i] = fmt.Sprintf("%s:%s", prefix, strconv.Itoa(i))
 		values[i] = strconv.Itoa(i)
@@ -158,33 +157,37 @@ func testMultipleString(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var mv *[]string
-	mv, err = MGetStringCache(&keys)
-	if err != nil {
-		t.Fatal(err)
-	}
+	newKeys := append(keys, "test:shouldbenil")
 
-	if !reflect.DeepEqual(values, *mv) {
-		t.Fatal("MGet result failed.")
+	if mv, err := MGetStringCache(&newKeys); err != nil {
+		t.Error(err)
+	} else {
+		if len(*mv) != len(newKeys) {
+			t.Error("Length for k and v are not the same.")
+		} else {
+			for i := 0; i < len(values); i++ {
+				if *((*mv)[i]) != values[i] {
+					t.Error("result is not same.")
+				}
+			}
+
+			l := len(values)
+
+			if (*mv)[l] != nil {
+				t.Error("The last value should be nil.")
+			}
+		}
 	}
 
 	if err := MDelCache(&keys); err != nil {
 		t.Fatal(err)
-	}
-
-	mv, err = MGetStringCache(&keys)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if empty := make([]string, 5); !reflect.DeepEqual(empty, *mv) {
-		t.Fatal("MDel result failed.")
 	}
 }
 
 func testMultipleBytes(t *testing.T) {
 	keys := make([]string, 5)
 	bValues := make([][]byte, 5)
+
 	for i := 0; i < 5; i++ {
 		keys[i] = fmt.Sprintf("%s:%s", prefix, strconv.Itoa(i))
 		bValues[i] = []byte(strconv.Itoa(i))
@@ -194,28 +197,30 @@ func testMultipleBytes(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var mbv *[][]byte
-	var err error
-	mbv, err = MGetBytesCache(&keys)
-	if err != nil {
-		t.Fatal(err)
-	}
+	newKeys := append(keys, "test:shouldbenil")
 
-	if !reflect.DeepEqual(bValues, *mbv) {
-		t.Fatal("MGet result failed.")
+	if mv, err := MGetBytesCache(&newKeys); err != nil {
+		t.Error(err)
+	} else {
+		if len(*mv) != len(newKeys) {
+			t.Error("Length for k and v are not the same.")
+		} else {
+			for i := 0; i < len(bValues); i++ {
+				if !reflect.DeepEqual(*((*mv)[i]), bValues[i]) {
+					t.Error("result is not same.")
+				}
+			}
+
+			l := len(bValues)
+
+			if (*mv)[l] != nil {
+				t.Error("The last value should be nil.")
+			}
+		}
 	}
 
 	if err := MDelCache(&keys); err != nil {
 		t.Fatal(err)
-	}
-
-	mbv, err = MGetBytesCache(&keys)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if empty := make([][]byte, 5); !reflect.DeepEqual(empty, *mbv) {
-		t.Fatal("MDel result failed.")
 	}
 }
 
