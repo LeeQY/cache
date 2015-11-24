@@ -88,7 +88,7 @@ func GetStringCache(key *string) (*string, error) {
 // Get the cache bytes value for the key.
 //
 // Return: value and ok
-func GetBytesCache(key *string) (*[]byte, error) {
+func GetBytesCache(key *string) ([]byte, error) {
 	if key == nil {
 		return nil, errors.New("Key can't be nil.")
 	}
@@ -106,7 +106,7 @@ func GetBytesCache(key *string) (*[]byte, error) {
 			return nil, err
 		}
 	} else {
-		return &reply, nil
+		return reply, nil
 	}
 }
 
@@ -138,7 +138,7 @@ func GetCacheTTL(key *string) (int64, error) {
 // MGet the cache string values for the keys.
 //
 // Return: the values and ok. If the value for one is not exist, it will be nil"
-func MGetStringCache(keys *[]string) (*[]*string, error) {
+func MGetStringCache(keys []string) ([]*string, error) {
 	if keys == nil {
 		return nil, errors.New("keys should not be nil.")
 	}
@@ -149,14 +149,14 @@ func MGetStringCache(keys *[]string) (*[]*string, error) {
 	}
 	defer (*conn).Close()
 
-	kL := len(*keys)
+	kL := len(keys)
 	if kL == 0 {
 		return nil, nil
 	}
 
 	var keyN []interface{}
 	for i := 0; i < kL; i++ {
-		keyN = append(keyN, (*keys)[i])
+		keyN = append(keyN, keys[i])
 	}
 
 	if reply, err := redis.Values((*conn).Do("MGET", keyN...)); err != nil {
@@ -176,14 +176,14 @@ func MGetStringCache(keys *[]string) (*[]*string, error) {
 				result[i] = &one
 			}
 		}
-		return &result, nil
+		return result, nil
 	}
 }
 
 // MGet the cache bytes values for the keys.
 //
 // Return: the values and ok. If the value for one is not exist, it will be nil
-func MGetBytesCache(keys *[]string) (*[]*[]byte, error) {
+func MGetBytesCache(keys []string) ([][]byte, error) {
 	if keys == nil {
 		return nil, errors.New("keys should not be nil.")
 	}
@@ -194,19 +194,19 @@ func MGetBytesCache(keys *[]string) (*[]*[]byte, error) {
 	}
 	defer (*conn).Close()
 
-	kL := len(*keys)
+	kL := len(keys)
 
 	var keyN []interface{}
 	for i := 0; i < kL; i++ {
-		keyN = append(keyN, (*keys)[i])
+		keyN = append(keyN, keys[i])
 	}
 
 	if reply, err := redis.Values((*conn).Do("MGET", keyN...)); err != nil {
 		return nil, err
 	} else if len(reply) != kL {
-		return nil, errors.New("The length of reply is not equal to number of keys.")
+		return nil, errors.New("The reply length isn't equal to the number of keys.")
 	} else {
-		result := make([]*[]byte, kL)
+		result := make([][]byte, kL)
 		for i := 0; i < kL; i++ {
 			if one, err := redis.Bytes(reply[i], nil); err != nil {
 				if err == redis.ErrNil {
@@ -215,17 +215,17 @@ func MGetBytesCache(keys *[]string) (*[]*[]byte, error) {
 					return nil, err
 				}
 			} else {
-				result[i] = &one
+				result[i] = one
 			}
 		}
-		return &result, nil
+		return result, nil
 	}
 }
 
 // MSet the cache string values for the keys.
 //
 // Return: error
-func MSetStringCache(keys *[]string, values *[]string) error {
+func MSetStringCache(keys, values []string) error {
 	if keys == nil {
 		return errors.New("keys should not be nil.")
 	}
@@ -234,8 +234,8 @@ func MSetStringCache(keys *[]string, values *[]string) error {
 		return errors.New("values should not be nil.")
 	}
 
-	kL := len(*keys)
-	if kL != len(*values) {
+	kL := len(keys)
+	if kL != len(values) {
 		return errors.New("The length of keys and values are not the same.")
 	}
 
@@ -251,17 +251,17 @@ func MSetStringCache(keys *[]string, values *[]string) error {
 
 	var v []interface{}
 	for i := 0; i < kL; i++ {
-		v = append(v, (*keys)[i], (*values)[i])
+		v = append(v, keys[i], values[i])
 	}
 	(*conn).Do("MSET", v...)
 
 	return nil
 }
 
-// MSet the cache bytes values for the keys.
+// MSet the cache bytes values for the keys. Items for values can't be nil.
 //
 // Return: error
-func MSetBytesCache(keys *[]string, values *[][]byte) error {
+func MSetBytesCache(keys []string, values [][]byte) error {
 	if keys == nil {
 		return errors.New("keys should not be nil.")
 	}
@@ -270,9 +270,9 @@ func MSetBytesCache(keys *[]string, values *[][]byte) error {
 		return errors.New("values should not be nil.")
 	}
 
-	kL := len(*keys)
-	if kL != len(*values) {
-		return errors.New("The length of keys and values are not the same.")
+	kL := len(keys)
+	if kL != len(values) {
+		return errors.New("The length of keys and values are not equal.")
 	}
 
 	if kL == 0 {
@@ -287,7 +287,10 @@ func MSetBytesCache(keys *[]string, values *[][]byte) error {
 
 	var v []interface{}
 	for i := 0; i < kL; i++ {
-		v = append(v, (*keys)[i], (*values)[i])
+		if values[i] == nil {
+			return errors.New("Value item can't be nil.")
+		}
+		v = append(v, keys[i], values[i])
 	}
 	(*conn).Do("MSET", v...)
 
@@ -297,7 +300,7 @@ func MSetBytesCache(keys *[]string, values *[][]byte) error {
 // Update a key's expiration.
 //
 // Return: error
-func UpdateExpiration(k *[]string, ex *[]uint64) error {
+func UpdateExpiration(k []string, ex []uint64) error {
 	if k == nil {
 		return errors.New("The keys should't be nil.")
 	}
@@ -306,8 +309,8 @@ func UpdateExpiration(k *[]string, ex *[]uint64) error {
 		return errors.New("The ex should't be nil.")
 	}
 
-	kL := len(*k)
-	if kL != len(*ex) {
+	kL := len(k)
+	if kL != len(ex) {
 		return errors.New("The length for k and ex are not the same.")
 	}
 
@@ -323,7 +326,7 @@ func UpdateExpiration(k *[]string, ex *[]uint64) error {
 
 	(*conn).Send("MULTI")
 	for i := 0; i < kL; i++ {
-		(*conn).Send("EXPIRE", (*k)[i], (*ex)[i])
+		(*conn).Send("EXPIRE", k[i], ex[i])
 	}
 	(*conn).Do("EXEC")
 
@@ -358,7 +361,7 @@ func SetStringCacheEX(key, value *string, ex uint64) error {
 // Set a bytes cache with expiration in seconds.
 //
 // Return: error
-func SetBytesCacheEX(key *string, value *[]byte, ex uint64) error {
+func SetBytesCacheEX(key *string, value []byte, ex uint64) error {
 	if key == nil {
 		return errors.New("The key should't be nil.")
 	}
@@ -373,7 +376,7 @@ func SetBytesCacheEX(key *string, value *[]byte, ex uint64) error {
 	}
 	defer (*conn).Close()
 
-	if _, err = (*conn).Do("SETEX", *key, ex, *value); err != nil {
+	if _, err = (*conn).Do("SETEX", *key, ex, value); err != nil {
 		return err
 	} else {
 		return nil
@@ -408,7 +411,7 @@ func SetStringCache(key, value *string) error {
 // Set a bytes cache.
 //
 // Return: error
-func SetBytesCache(key *string, value *[]byte) error {
+func SetBytesCache(key *string, value []byte) error {
 	if key == nil {
 		return errors.New("The key should't be nil.")
 	}
@@ -423,7 +426,7 @@ func SetBytesCache(key *string, value *[]byte) error {
 	}
 	defer (*conn).Close()
 
-	if _, err = (*conn).Do("SET", *key, *value); err != nil {
+	if _, err = (*conn).Do("SET", *key, value); err != nil {
 		return err
 	} else {
 		return nil
@@ -453,7 +456,7 @@ func DelCache(key *string) error {
 // MDel the keys
 //
 // Return: error
-func MDelCache(keys *[]string) error {
+func MDelCache(keys []string) error {
 	conn, err := getConn()
 	if err != nil {
 		return err
@@ -462,13 +465,13 @@ func MDelCache(keys *[]string) error {
 
 	if keys == nil {
 		return errors.New("keys should not be nil.")
-	} else if len(*keys) == 0 {
+	} else if len(keys) == 0 {
 		return nil
 	}
 
 	(*conn).Send("MULTI")
-	for i := 0; i < len(*keys); i++ {
-		(*conn).Send("DEL", (*keys)[i])
+	for i := 0; i < len(keys); i++ {
+		(*conn).Send("DEL", keys[i])
 	}
 	(*conn).Do("EXEC")
 
@@ -498,7 +501,7 @@ func CheckCache(key *string) (bool, error) {
 // prefix The prefix string to scan.
 //
 // Return: (offset, keys, error), if the offset is 0, means the scan is over.
-func ListKeys(offset int64, prefix *string) (int64, *[]string, error) {
+func ListKeys(offset int64, prefix *string) (int64, []string, error) {
 	if prefix == nil {
 		return 0, nil, errors.New("Prefix can't be nil.")
 	}
@@ -529,5 +532,5 @@ func ListKeys(offset int64, prefix *string) (int64, *[]string, error) {
 		keys = append(keys, key)
 	}
 
-	return newOffset, &keys, nil
+	return newOffset, keys, nil
 }
